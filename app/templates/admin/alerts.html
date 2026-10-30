@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Vigilance Fraud Alerts Register{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h3 fw-bold text-slate-900 mb-0">Fraud Alerts & Investigation Register</h2>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Audit Trail</span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                Real-time anomaly surveillance, duplicate ration card detection, and physical stock discrepancy tracking.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="POST" action="{{ url_for('admin.run_audit') }}" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">
+                    <i class="bi bi-shield-shaded me-1"></i> Run Fraud Audit Now
+                </button>
+            </form>
+            <a href="{{ url_for('admin.reconciliation') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i class="bi bi-calculator me-1"></i> Stock Reconciliation
+            </a>
+            <a href="{{ url_for('admin.alerts') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-arrow-clockwise me-1"></i> Reset Filters
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body bg-white p-3 rounded">
+            <form method="GET" action="{{ url_for('admin.alerts') }}" class="row g-2 align-items-center">
+                <!-- Search Query -->
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="Search code, shop, description..." value="{{ search_q or '' }}">
+                    </div>
+                </div>
+
+                <!-- Severity Filter -->
+                <div class="col-6 col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Risk Level</label>
+                    <select name="severity" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Risk Levels</option>
+                        {% for s in severities %}
+                        <option value="{{ s }}" {% if selected_severity == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-6 col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        {% for st in statuses %}
+                        <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Shop Filter -->
+                <div class="col-8 col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Fair Price Shop</label>
+                    <select name="shop_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Shops</option>
+                        {% for shop in shops %}
+                        <option value="{{ shop.id }}" {% if selected_shop_id == shop.id %}selected{% endif %}>
+                            {{ shop.shop_no }} - {{ shop.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-4 col-md-2 d-flex align-items-end">
+                    <a href="{{ url_for('admin.alerts') }}" class="btn btn-light btn-sm w-100 border">
+                        <i class="bi bi-x-circle me-1"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Table Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-table text-primary me-2"></i>Active Alerts Ledger ({{ alerts|length }} Records)
+            </h5>
+            <small class="text-muted">Table columns: Shop | Transaction | Alert Reason | Risk Level | Investigation Status | Timestamp</small>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-3" style="min-width: 140px;">Shop</th>
+                        <th scope="col" style="min-width: 130px;">Transaction</th>
+                        <th scope="col" style="min-width: 320px;">Alert Reason</th>
+                        <th scope="col" style="min-width: 120px;">Risk Level</th>
+                        <th scope="col" style="min-width: 140px;">Investigation Status</th>
+                        <th scope="col" style="min-width: 130px;">Timestamp</th>
+                        <th scope="col" class="text-end pe-3" style="min-width: 200px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr>
+                        <!-- 1. Shop -->
+                        <td class="ps-3">
+                            {% if alert.shop %}
+                                <a href="{{ url_for('admin.alerts', shop_id=alert.shop.id) }}" class="text-decoration-none">
+                                    <span class="badge bg-light text-dark border fw-bold">{{ alert.shop.shop_no }}</span>
+                                </a>
+                                <div class="fw-medium text-dark small text-truncate" style="max-width: 160px;">{{ alert.shop.name }}</div>
+                                <small class="text-muted">{{ alert.shop.district }}</small>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">System-Wide Audit</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 2. Transaction -->
+                        <td>
+                            {% if alert.transaction %}
+                                <code class="fw-bold text-primary">{{ alert.transaction.transaction_code }}</code>
+                                <div class="small text-muted">{{ alert.transaction.commodity }} ({{ alert.transaction.quantity }}kg)</div>
+                                <span class="badge bg-light text-dark border fs-xxs">{{ alert.transaction.auth_mode }}</span>
+                            {% else %}
+                                <span class="text-muted small">
+                                    <i class="bi bi-journal-check me-1"></i>Depot Ledger Audit
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 3. Alert Reason -->
+                        <td>
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                <span class="badge bg-dark-subtle text-dark border fs-xxs">
+                                    {{ alert.alert_type.replace('_', ' ') }}
+                                </span>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle fs-xxs">
+                                    Conf: {{ (alert.confidence_score * 100)|round }}%
+                                </span>
+                            </div>
+                            <div class="small text-secondary lh-sm mb-1">
+                                {{ alert.description }}
+                            </div>
+                            <a href="{{ url_for('admin.alert_detail', alert_id=alert.id) }}" class="small text-primary text-decoration-none fw-medium">
+                                <i class="bi bi-arrow-right-circle me-1"></i>View Diagnostic Evidence
+                            </a>
+                        </td>
+
+                        <!-- 4. Risk Level -->
+                        <td>
+                            {% if alert.severity == 'CRITICAL' %}
+                                <span class="badge badge-critical px-2 py-1"><i class="bi bi-radioactive me-1"></i>CRITICAL</span>
+                            {% elif alert.severity == 'HIGH' %}
+                                <span class="badge badge-high px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>HIGH</span>
+                            {% elif alert.severity == 'MEDIUM' %}
+                                <span class="badge badge-medium px-2 py-1"><i class="bi bi-info-circle-fill me-1"></i>MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-low px-2 py-1"><i class="bi bi-shield-check me-1"></i>LOW</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 5. Investigation Status -->
+                        <td>
+                            <span class="badge {% if alert.status == 'DETECTED' %}bg-danger{% elif alert.status == 'INVESTIGATING' %}bg-warning text-dark{% elif alert.status == 'RESOLVED' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if alert.status == 'INVESTIGATING' %}UNDER REVIEW{% else %}{{ alert.status }}{% endif %}
+                            </span>
+                        </td>
+
+                        <!-- 6. Timestamp -->
+                        <td class="text-muted small whitespace-nowrap">
+                            <div><i class="bi bi-clock me-1"></i>{{ alert.detected_at.strftime('%d %b %Y') }}</div>
+                            <small class="text-secondary">{{ alert.detected_at.strftime('%H:%M:%S UTC') }}</small>
+                            {% if alert.resolved_at %}
+                            <div class="badge bg-success-subtle text-success fs-xxs d-block mt-1">
+                                Resolved: {{ alert.resolved_at.strftime('%d %b') }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="text-end pe-3 whitespace-nowrap">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin.alert_detail', alert_id=alert.id) }}" class="btn btn-outline-primary" title="View Alert Details">
+                                    <i class="bi bi-eye"></i> Details
+                                </a>
+
+                                {% if alert.status != 'INVESTIGATING' and alert.status != 'RESOLVED' %}
+                                <form method="POST" action="{{ url_for('admin.update_alert_status', alert_id=alert.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="INVESTIGATING">
+                                    <button type="submit" class="btn btn-outline-warning text-dark" title="Mark as Under Review">
+                                        <i class="bi bi-search"></i> Review
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                {% if alert.status != 'RESOLVED' %}
+                                <form method="POST" action="{{ url_for('admin.update_alert_status', alert_id=alert.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="RESOLVED">
+                                    <button type="submit" class="btn btn-outline-success" title="Mark as Resolved">
+                                        <i class="bi bi-check-lg"></i> Resolve
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Fraud Alerts Match Filters</h6>
+                            <p class="small text-muted mb-2">Try clearing search keywords or resetting status filters.</p>
+                            <a href="{{ url_for('admin.alerts') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                Clear Filters
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
