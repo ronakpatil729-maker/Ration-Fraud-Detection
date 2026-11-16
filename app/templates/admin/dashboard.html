@@ -1,0 +1,1047 @@
+{% extends "base.html" %}
+
+{% block title %}Vigilance Operations Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+    <!-- Dashboard Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h3 fw-bold text-slate-900 mb-0">PDS Vigilance Operations Center</h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Live Monitoring</span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">Real-time fraud surveillance, biometric discrepancy tracking & Fair Price Shop auditing.</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small d-none d-lg-inline">
+                <i class="bi bi-person-badge me-1"></i> Admin: <strong>{{ current_user.full_name }}</strong>
+            </span>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#xgbPredictModal">
+                <i class="bi bi-cpu me-1"></i> AI Fraud Predictor (XGBoost)
+            </button>
+            <form method="POST" action="{{ url_for('admin.run_audit') }}" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm" id="runAuditBtn">
+                    <i class="bi bi-shield-shaded me-1"></i> Run Fraud Audit
+                </button>
+            </form>
+            <a href="{{ url_for('admin.reconciliation') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i class="bi bi-calculator me-1"></i> Stock Reconciliation
+            </a>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </a>
+        </div>
+    </div>
+
+    <!-- 1. SUMMARY CARDS: Shops, Beneficiaries, Transactions, and Pending Alerts -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Fair Price Shops Card -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-stat shadow-sm h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Fair Price Shops</div>
+                        <h3 class="fw-bold my-1 text-dark">{{ total_shops }}</h3>
+                        <small class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Active Monitored Outlets</small>
+                    </div>
+                    <div class="stat-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-shop fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Beneficiaries Card -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-stat stat-success shadow-sm h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Beneficiaries</div>
+                        <h3 class="fw-bold my-1 text-dark">{{ total_beneficiaries }}</h3>
+                        <small class="text-muted"><i class="bi bi-people-fill text-success me-1"></i>Aadhaar-Linked Families</small>
+                    </div>
+                    <div class="stat-icon bg-success-subtle text-success">
+                        <i class="bi bi-person-vcard fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Transactions Card -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-stat stat-warning shadow-sm h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Transactions</div>
+                        <h3 class="fw-bold my-1 text-dark">{{ total_transactions }}</h3>
+                        <small class="{% if flagged_transactions > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            <i class="bi bi-flag-fill me-1"></i>{{ flagged_transactions }} Flagged / Anomalous
+                        </small>
+                    </div>
+                    <div class="stat-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-receipt-cutoff fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Pending Alerts Card -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-stat stat-danger shadow-sm h-100 p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Pending Alerts</div>
+                        <h3 class="fw-bold my-1 text-danger">{{ pending_alerts }}</h3>
+                        <small class="text-danger fw-semibold">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ critical_alerts }} Critical Severity
+                        </small>
+                    </div>
+                    <div class="stat-icon bg-danger-subtle text-danger">
+                        <i class="bi bi-shield-exclamation fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ML & Dataset Intelligence Banner -->
+    <div class="card shadow-sm border-0 mb-4 text-white p-3 p-md-4 rounded-3" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+        <div class="row align-items-center g-3">
+            <div class="col-12 col-lg-7">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary px-2 py-1"><i class="bi bi-cpu-fill me-1"></i> Dual-Engine AI Vigilance</span>
+                    <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i> XGBoost Model Active</span>
+                    <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-database-check me-1"></i> 20,000 Dataset Records</span>
+                </div>
+                <h5 class="fw-bold mb-1 text-white">XGBoost Supervised Classification & Isolation Forest Anomaly Engine</h5>
+                <p class="text-white-50 small mb-0">
+                    Integrated model trained on <code>ration_card_fraud_dataset.csv</code> (20,000 records, ~7% fraud prevalence). Automatically audits quota diversion, identity anomalies, and biometric bypass events across all Fair Price Shops.
+                </p>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="d-flex flex-wrap justify-content-lg-end gap-2 align-items-center">
+                    <div class="bg-white bg-opacity-10 rounded p-2 px-3 text-center border border-white border-opacity-10">
+                        <small class="text-white-50 d-block" style="font-size: 0.72rem;">Model Accuracy</small>
+                        <span class="fw-bold text-white fs-5">95.74%</span>
+                    </div>
+                    <div class="bg-white bg-opacity-10 rounded p-2 px-3 text-center border border-white border-opacity-10">
+                        <small class="text-white-50 d-block" style="font-size: 0.72rem;">Fraud Precision</small>
+                        <span class="fw-bold text-success fs-5">90.0%</span>
+                    </div>
+                    <div class="bg-white bg-opacity-10 rounded p-2 px-3 text-center border border-white border-opacity-10">
+                        <small class="text-white-50 d-block" style="font-size: 0.72rem;">Dataset Rows</small>
+                        <span class="fw-bold text-info fs-5">{{ dataset_summary.total_records if dataset_summary else '20,000' }}</span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#xgbPredictModal">
+                        <i class="bi bi-play-circle-fill me-1"></i> Test Predictor
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CHARTS SECTION: Monthly Distribution and Stock Discrepancy -->
+    <div class="row g-4 mb-4">
+        <!-- Chart 1: Monthly Distribution Volume (Stacked Bar / Multi-line) -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar3 text-primary me-2"></i>Monthly Distribution Volume (kg)
+                        </h6>
+                        <small class="text-muted">Breakdown by commodity across operational cycles</small>
+                    </div>
+                    <span class="badge bg-light text-dark border">PDS Ledger</span>
+                </div>
+                <div class="card-body p-3">
+                    {% if total_transactions > 0 %}
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="monthlyDistributionChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 py-5 text-muted">
+                        <i class="bi bi-bar-chart fs-1 text-secondary mb-2"></i>
+                        <p class="mb-0">No distribution transactions recorded yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Stock Discrepancy & Balance Chart -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0">
+                            <i class="bi bi-calculator text-danger me-2"></i>Stock Discrepancy & Balances
+                        </h6>
+                        <small class="text-muted">Received vs Distributed vs Closing Balance by Fair Price Shop</small>
+                    </div>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Audit Check</span>
+                </div>
+                <div class="card-body p-3">
+                    {% if total_shops > 0 %}
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="stockDiscrepancyChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="d-flex flex-column align-items-center justify-content-center h-100 py-5 text-muted">
+                        <i class="bi bi-boxes fs-1 text-secondary mb-2"></i>
+                        <p class="mb-0">No shops or stock logs recorded yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. SHOP-WISE RISK SUMMARIES -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-buildings text-primary me-2"></i>Fair Price Shop Risk Summaries
+                </h5>
+                <small class="text-muted">Real-time risk scoring synthesized from active alerts, stock discrepancies, and dispatch volume</small>
+            </div>
+            <a href="{{ url_for('admin.reconciliation') }}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i class="bi bi-eye me-1"></i> Detailed Stock Audits
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Shop Code & Name</th>
+                        <th>District / Taluk</th>
+                        <th class="text-center">Total Alerts</th>
+                        <th class="text-center">Critical / High</th>
+                        <th class="text-center">Pending Reviews</th>
+                        <th class="text-end">Total Dispatched</th>
+                        <th class="text-center pe-3">Assessed Risk Tier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in shop_risk_summaries %}
+                    <tr>
+                        <td class="ps-3">
+                            <a href="{{ url_for('admin.alerts', shop_id=item.shop.id) }}" class="fw-bold text-decoration-none">
+                                <span class="badge bg-light text-dark border me-1">{{ item.shop.shop_no }}</span>
+                                {{ item.shop.name }}
+                            </a>
+                        </td>
+                        <td class="small text-muted">{{ item.shop.district }} ({{ item.shop.taluk }})</td>
+                        <td class="text-center fw-semibold">{{ item.total_alerts }}</td>
+                        <td class="text-center">
+                            {% if item.critical_count > 0 %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ item.critical_count }} Crit</span>
+                            {% elif item.high_count > 0 %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ item.high_count }} High</span>
+                            {% else %}
+                                <span class="text-muted small">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if item.pending_count > 0 %}
+                                <span class="badge bg-warning text-dark">{{ item.pending_count }} Active</span>
+                            {% else %}
+                                <span class="badge bg-success-subtle text-success">0 Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-mono small">{{ "%.1f"|format(item.total_distributed_kg) }} kg</td>
+                        <td class="text-center pe-3">
+                            {% if item.risk_tier == 'CRITICAL' %}
+                                <span class="badge badge-critical px-2 py-1"><i class="bi bi-radioactive me-1"></i>CRITICAL RISK</span>
+                            {% elif item.risk_tier == 'HIGH' %}
+                                <span class="badge badge-high px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>HIGH RISK</span>
+                            {% elif item.risk_tier == 'MEDIUM' %}
+                                <span class="badge badge-medium px-2 py-1"><i class="bi bi-info-circle-fill me-1"></i>MEDIUM RISK</span>
+                            {% else %}
+                                <span class="badge badge-low px-2 py-1"><i class="bi bi-shield-check me-1"></i>NORMAL</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 text-secondary d-block mb-1"></i>
+                            No Fair Price Shops registered in the system.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. SEARCHABLE & FILTERABLE FRAUD ALERTS TABLE -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-shield-shaded text-danger me-2"></i>Fraud Alerts & Case Management
+                </h5>
+                <small class="text-muted">Instant live search & multi-tier filtering across active vigilance records</small>
+            </div>
+            <div>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
+                    <i class="bi bi-bell-fill me-1"></i> {{ pending_alerts }} Actionable Inquiries
+                </span>
+            </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="p-3 bg-light border-bottom">
+            <form method="GET" action="{{ url_for('admin.dashboard') }}" class="row g-2 align-items-center" id="filterForm">
+                <!-- Live Search Box -->
+                <div class="col-12 col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input 
+                            type="text" 
+                            name="q" 
+                            id="tableSearchInput" 
+                            class="form-control border-start-0" 
+                            placeholder="Search alerts, shop, or reason..." 
+                            value="{{ search_q or '' }}"
+                        >
+                    </div>
+                </div>
+
+                <!-- Severity Filter -->
+                <div class="col-6 col-md-2">
+                    <select name="severity" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Risk Levels</option>
+                        <option value="CRITICAL" {% if selected_severity == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+                        <option value="HIGH" {% if selected_severity == 'HIGH' %}selected{% endif %}>HIGH</option>
+                        <option value="MEDIUM" {% if selected_severity == 'MEDIUM' %}selected{% endif %}>MEDIUM</option>
+                        <option value="LOW" {% if selected_severity == 'LOW' %}selected{% endif %}>LOW</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-6 col-md-2">
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        <option value="DETECTED" {% if selected_status == 'DETECTED' %}selected{% endif %}>DETECTED</option>
+                        <option value="INVESTIGATING" {% if selected_status == 'INVESTIGATING' %}selected{% endif %}>INVESTIGATING</option>
+                        <option value="RESOLVED" {% if selected_status == 'RESOLVED' %}selected{% endif %}>RESOLVED</option>
+                        <option value="DISMISSED" {% if selected_status == 'DISMISSED' %}selected{% endif %}>DISMISSED</option>
+                    </select>
+                </div>
+
+                <!-- Shop Filter -->
+                <div class="col-8 col-md-3">
+                    <select name="shop_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Fair Price Shops</option>
+                        {% for shop in shops %}
+                        <option value="{{ shop.id }}" {% if selected_shop_id == shop.id %}selected{% endif %}>
+                            {{ shop.shop_no }} - {{ shop.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Reset Button -->
+                <div class="col-4 col-md-1">
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-x-lg"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Alerts Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="alertsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-3" style="min-width: 140px;">Shop</th>
+                        <th scope="col" style="min-width: 130px;">Transaction</th>
+                        <th scope="col" style="min-width: 320px;">Alert Reason</th>
+                        <th scope="col" style="min-width: 120px;">Risk Level</th>
+                        <th scope="col" style="min-width: 140px;">Investigation Status</th>
+                        <th scope="col" style="min-width: 130px;">Timestamp</th>
+                        <th scope="col" class="text-end pe-3" style="min-width: 220px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in recent_alerts %}
+                    <tr class="alert-row">
+                        <!-- Shop -->
+                        <td class="ps-3">
+                            {% if alert.shop %}
+                                <a href="{{ url_for('admin.alerts', shop_id=alert.shop.id) }}" class="text-decoration-none">
+                                    <span class="badge bg-light text-dark border fw-bold">{{ alert.shop.shop_no }}</span>
+                                </a>
+                                <small class="text-muted d-block text-truncate" style="max-width: 140px;">{{ alert.shop.name }}</small>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">System-Wide</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Transaction -->
+                        <td>
+                            {% if alert.transaction %}
+                                <code class="fw-bold text-primary">{{ alert.transaction.transaction_code }}</code>
+                                <small class="text-muted d-block">{{ alert.transaction.commodity }} ({{ alert.transaction.quantity }}kg)</small>
+                            {% else %}
+                                <span class="text-muted small"><i class="bi bi-journal-check me-1"></i>Stock Audit</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Alert Reason (with link to details) -->
+                        <td>
+                            <div class="d-flex align-items-center gap-1 mb-1">
+                                <span class="badge bg-dark-subtle text-dark border fs-xxs">
+                                    {{ alert.alert_type.replace('_', ' ') }}
+                                </span>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle fs-xxs">
+                                    Conf: {{ (alert.confidence_score * 100)|round }}%
+                                </span>
+                            </div>
+                            <div class="small text-secondary lh-sm mb-1 alert-description-text">
+                                {{ alert.description }}
+                            </div>
+                            <a href="{{ url_for('admin.alert_detail', alert_id=alert.id) }}" class="small text-primary fw-medium text-decoration-none">
+                                <i class="bi bi-arrow-right-circle me-1"></i>View Diagnostic Details & Explanations
+                            </a>
+                        </td>
+
+                        <!-- Risk Level -->
+                        <td>
+                            {% if alert.severity == 'CRITICAL' %}
+                                <span class="badge badge-critical px-2 py-1"><i class="bi bi-radioactive me-1"></i>CRITICAL</span>
+                            {% elif alert.severity == 'HIGH' %}
+                                <span class="badge badge-high px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>HIGH</span>
+                            {% elif alert.severity == 'MEDIUM' %}
+                                <span class="badge badge-medium px-2 py-1"><i class="bi bi-info-circle-fill me-1"></i>MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-low px-2 py-1"><i class="bi bi-shield-check me-1"></i>LOW</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Investigation Status -->
+                        <td>
+                            <span class="badge {% if alert.status == 'DETECTED' %}bg-danger{% elif alert.status == 'INVESTIGATING' %}bg-warning text-dark{% elif alert.status == 'RESOLVED' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if alert.status == 'INVESTIGATING' %}UNDER REVIEW{% else %}{{ alert.status }}{% endif %}
+                            </span>
+                        </td>
+
+                        <!-- Timestamp -->
+                        <td class="text-muted small whitespace-nowrap">
+                            {{ alert.detected_at.strftime('%d %b %Y') }}
+                            <small class="text-secondary d-block">{{ alert.detected_at.strftime('%H:%M UTC') }}</small>
+                        </td>
+
+                        <!-- Action Buttons: Mark Under Review / Mark Resolved / View Details -->
+                        <td class="text-end pe-3 whitespace-nowrap">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <!-- Details Page Button -->
+                                <a href="{{ url_for('admin.alert_detail', alert_id=alert.id) }}" class="btn btn-outline-primary" title="View Deep Diagnosis">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+
+                                <!-- Mark Under Review Button -->
+                                {% if alert.status != 'INVESTIGATING' and alert.status != 'RESOLVED' %}
+                                <form method="POST" action="{{ url_for('admin.update_alert_status', alert_id=alert.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="INVESTIGATING">
+                                    <button type="submit" class="btn btn-outline-warning text-dark" title="Mark as Under Review">
+                                        <i class="bi bi-search"></i> Review
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- Mark Resolved Button -->
+                                {% if alert.status != 'RESOLVED' %}
+                                <form method="POST" action="{{ url_for('admin.update_alert_status', alert_id=alert.id) }}" class="d-inline">
+                                    <input type="hidden" name="status" value="RESOLVED">
+                                    <button type="submit" class="btn btn-outline-success" title="Mark as Resolved">
+                                        <i class="bi bi-check-lg"></i> Resolve
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <!-- Clear Empty State -->
+                    <tr id="emptyStateRow">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Fraud Alerts Found</h6>
+                            <p class="small text-muted mb-2">No active fraud alerts match the selected filters or search keywords.</p>
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                Reset Filters & View All
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- XGBoost Fraud Prediction Modal -->
+    <div class="modal fade" id="xgbPredictModal" tabindex="-1" aria-labelledby="xgbPredictModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="xgbPredictModalLabel">
+                        <i class="bi bi-cpu-fill"></i>
+                        <span>AI Ration Fraud Prediction Engine (XGBoost)</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        Evaluate fraud risk with the <strong>XGBoost Classifier</strong> trained on 20,000 records from <code>ration_card_fraud_dataset.csv</code>. Choose an evaluation method:
+                    </p>
+
+                    <!-- Nav Tabs for Prediction Modes -->
+                    <ul class="nav nav-pills nav-fill mb-3 p-1 bg-light rounded border" id="predictModeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-2 small fw-semibold" id="tab-simulator-btn" data-bs-toggle="pill" data-bs-target="#tab-simulator" type="button" role="tab">
+                                <i class="bi bi-sliders me-1"></i> Feature Simulator & Presets
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-2 small fw-semibold" id="tab-db-btn" data-bs-toggle="pill" data-bs-target="#tab-db" type="button" role="tab">
+                                <i class="bi bi-person-lines-fill me-1"></i> Database Beneficiary (Live)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-2 small fw-semibold" id="tab-dataset-btn" data-bs-toggle="pill" data-bs-target="#tab-dataset" type="button" role="tab">
+                                <i class="bi bi-file-earmark-spreadsheet me-1"></i> 20k Dataset Record (CSV)
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="predictModeTabContent">
+                        <!-- Mode 1: Manual Feature Simulator -->
+                        <div class="tab-pane fade show active" id="tab-simulator" role="tabpanel">
+                            <!-- Presets -->
+                            <div class="d-flex align-items-center justify-content-between mb-3 p-2 bg-light rounded border">
+                                <span class="small fw-semibold text-secondary">Quick Presets:</span>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-success" id="presetNormalBtn">
+                                        <i class="bi bi-person-check me-1"></i> Normal Beneficiary
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" id="presetFraudBtn">
+                                        <i class="bi bi-shield-slash me-1"></i> Anomalous / Fraud Pattern
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Form -->
+                            <form id="xgbPredictForm">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Card Type</label>
+                                        <select class="form-select form-select-sm" id="cardType" name="Card_Type" required>
+                                            <option value="BPL" selected>BPL (Below Poverty Line)</option>
+                                            <option value="AAY">AAY (Antyodaya Anna Yojana)</option>
+                                            <option value="APL">APL (Above Poverty Line)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Family Size</label>
+                                        <input type="number" class="form-control form-control-sm" id="familySize" name="Family_Size" value="4" min="1" max="25" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold">Monthly Income (₹)</label>
+                                        <input type="number" class="form-control form-control-sm" id="monthlyIncome" name="Monthly_Income" value="6500" min="0" required>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Allocated Wheat (kg)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="allocatedWheat" name="Allocated_Wheat_kg" value="15" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Availed Wheat (kg)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="availedWheat" name="Availed_Wheat_kg" value="15" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Allocated Rice (kg)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="allocatedRice" name="Allocated_Rice_kg" value="20" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold">Availed Rice (kg)</label>
+                                        <input type="number" step="0.5" class="form-control form-control-sm" id="availedRice" name="Availed_Rice_kg" value="20" required>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Biometric Failures Count</label>
+                                        <input type="number" class="form-control form-control-sm" id="biometricFailures" name="Biometric_Failures" value="0" min="0" required>
+                                        <div class="form-text fs-xs">Recent biometric mismatch / override events.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Monthly Transactions Count</label>
+                                        <input type="number" class="form-control form-control-sm" id="monthlyTxns" name="Monthly_Transactions" value="1" min="0" required>
+                                        <div class="form-text fs-xs">Grain distribution requests in cycle.</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid mt-3">
+                                    <button type="submit" class="btn btn-primary" id="btnRunPrediction">
+                                        <i class="bi bi-lightning-charge-fill me-1"></i> Compute Fraud Prediction
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Mode 2: Live Database Beneficiary Scoring -->
+                        <div class="tab-pane fade" id="tab-db" role="tabpanel">
+                            <div class="p-3 bg-light rounded border mb-3">
+                                <label class="form-label small fw-semibold">Select Beneficiary Account</label>
+                                <select class="form-select form-select-sm mb-2" id="dbBeneficiarySelect">
+                                    {% if all_beneficiaries %}
+                                        {% for b in all_beneficiaries %}
+                                        <option value="{{ b.id }}">
+                                            {{ b.ration_card_no }} &bull; {{ b.head_of_family }} ({{ b.card_category }}, {{ b.family_members_count }} Members)
+                                        </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="">No beneficiaries available in database</option>
+                                    {% endif %}
+                                </select>
+                                <small class="text-muted d-block mb-3">
+                                    The system automatically calculates monthly availed quantities, biometric audit logs, and entitlements from the database and runs them through the XGBoost model.
+                                </small>
+                                <button type="button" class="btn btn-success w-100" id="btnScoreDbBeneficiary">
+                                    <i class="bi bi-shield-check me-1"></i> Evaluate Live Beneficiary with XGBoost
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mode 3: 20k Dataset Records (CSV) Lookup -->
+                        <div class="tab-pane fade" id="tab-dataset" role="tabpanel">
+                            <div class="p-3 bg-light rounded border mb-3">
+                                <label class="form-label small fw-semibold">Enter Card ID from <code>ration_card_fraud_dataset.csv</code></label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text"><i class="bi bi-credit-card-2-front"></i></span>
+                                    <input type="text" class="form-control" id="datasetCardIdInput" placeholder="e.g. RC-100000" value="RC-100000">
+                                    <button class="btn btn-primary" type="button" id="btnScoreDatasetRecord">
+                                        <i class="bi bi-search me-1"></i> Score Dataset Record
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-2">
+                                    <span class="small text-muted">Try sample IDs:</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-danger text-decoration-none" id="sampleDatasetFraud">
+                                        <i class="bi bi-exclamation-circle me-1"></i>RC-100000 (Fraud Row)
+                                    </button>
+                                    <span class="text-muted">&bull;</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-success text-decoration-none" id="sampleDatasetNormal">
+                                        <i class="bi bi-check-circle me-1"></i>RC-100001 (Normal Row)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prediction Result Display -->
+                    <div id="xgbResultContainer" class="mt-4 d-none">
+                        <div class="card border p-3" id="xgbResultCard">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold fs-6" id="xgbResultStatus">Prediction Status</span>
+                                <span class="badge px-3 py-2" id="xgbResultBadge">Status</span>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Fraud Risk Probability</span>
+                                    <span class="fw-bold" id="xgbResultPercent">0%</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar" id="xgbProgressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0" id="xgbResultDetails"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <small class="text-muted me-auto"><i class="bi bi-info-circle me-1"></i>Model: XGBoost Classifier (Trained on 20,000 synthetic records)</small>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Real Database Data passed safely from Flask view
+    const monthlyData = {{ monthly_chart_data | tojson }};
+    const discrepancyData = {{ stock_discrepancy_chart_data | tojson }};
+
+    // 1. Chart 1: Monthly Distribution Volume (Stacked Bar)
+    const ctxMonthly = document.getElementById('monthlyDistributionChart');
+    if (ctxMonthly && monthlyData.labels && monthlyData.labels.length > 0) {
+        new Chart(ctxMonthly, {
+            type: 'bar',
+            data: {
+                labels: monthlyData.labels,
+                datasets: [
+                    {
+                        label: 'Rice (kg)',
+                        data: monthlyData.rice,
+                        backgroundColor: '#0284c7',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Wheat (kg)',
+                        data: monthlyData.wheat,
+                        backgroundColor: '#d97706',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Sugar (kg)',
+                        data: monthlyData.sugar,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 12, font: { family: 'Inter', size: 12 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.raw} kg`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Total Grain Dispatched (kg)', font: { size: 11 } },
+                        ticks: { font: { family: 'Inter', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Chart 2: Stock Discrepancy & Balances by Fair Price Shop
+    // Compares Received Stock vs Distributed Stock vs Closing Balance vs Discrepancy Deficit
+    const ctxDiscrepancy = document.getElementById('stockDiscrepancyChart');
+    if (ctxDiscrepancy && discrepancyData.labels && discrepancyData.labels.length > 0) {
+        new Chart(ctxDiscrepancy, {
+            type: 'bar',
+            data: {
+                labels: discrepancyData.labels,
+                datasets: [
+                    {
+                        label: 'Received Stock (kg)',
+                        data: discrepancyData.received,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Distributed Stock (kg)',
+                        data: discrepancyData.distributed,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Remaining Balance (kg)',
+                        data: discrepancyData.closing,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Deficit Discrepancy (kg)',
+                        data: discrepancyData.deficits,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 12, font: { family: 'Inter', size: 12 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.raw} kg`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Volume (kg)', font: { size: 11 } },
+                        ticks: { font: { family: 'Inter', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Client-side Real-time Search Filter for Alerts Table
+    const searchInput = document.getElementById('tableSearchInput');
+    const alertsTable = document.getElementById('alertsTable');
+    if (searchInput && alertsTable) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const rows = alertsTable.querySelectorAll('tbody tr.alert-row');
+            let visibleCount = 0;
+
+            rows.forEach(function(row) {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Handle dynamic empty state for instant search feedback
+            let dynamicEmpty = document.getElementById('dynamicEmptyRow');
+            if (visibleCount === 0 && rows.length > 0) {
+                if (!dynamicEmpty) {
+                    dynamicEmpty = document.createElement('tr');
+                    dynamicEmpty.id = 'dynamicEmptyRow';
+                    dynamicEmpty.innerHTML = `
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="bi bi-search fs-2 text-secondary d-block mb-1"></i>
+                            <div class="fw-semibold">No matching alerts for "${query}"</div>
+                            <small class="text-secondary">Try searching by shop code, anomaly type, or transaction reference.</small>
+                        </td>
+                    `;
+                    alertsTable.querySelector('tbody').appendChild(dynamicEmpty);
+                } else {
+                    dynamicEmpty.style.display = '';
+                    dynamicEmpty.querySelector('.fw-semibold').textContent = `No matching alerts for "${query}"`;
+                }
+            } else if (dynamicEmpty) {
+                dynamicEmpty.style.display = 'none';
+            }
+        });
+    }
+
+    // 4. XGBoost AI Predictor Modal Interactive Handler
+    const presetNormalBtn = document.getElementById('presetNormalBtn');
+    const presetFraudBtn = document.getElementById('presetFraudBtn');
+    const xgbForm = document.getElementById('xgbPredictForm');
+    const resultContainer = document.getElementById('xgbResultContainer');
+    const resultCard = document.getElementById('xgbResultCard');
+    const resultStatus = document.getElementById('xgbResultStatus');
+    const resultBadge = document.getElementById('xgbResultBadge');
+    const resultPercent = document.getElementById('xgbResultPercent');
+    const progressBar = document.getElementById('xgbProgressBar');
+    const resultDetails = document.getElementById('xgbResultDetails');
+    const btnRunPrediction = document.getElementById('btnRunPrediction');
+
+    if (presetNormalBtn) {
+        presetNormalBtn.addEventListener('click', function() {
+            document.getElementById('cardType').value = 'BPL';
+            document.getElementById('familySize').value = '4';
+            document.getElementById('monthlyIncome').value = '6500';
+            document.getElementById('allocatedWheat').value = '15';
+            document.getElementById('availedWheat').value = '15';
+            document.getElementById('allocatedRice').value = '20';
+            document.getElementById('availedRice').value = '20';
+            document.getElementById('biometricFailures').value = '0';
+            document.getElementById('monthlyTxns').value = '1';
+        });
+    }
+
+    if (presetFraudBtn) {
+        presetFraudBtn.addEventListener('click', function() {
+            document.getElementById('cardType').value = 'BPL';
+            document.getElementById('familySize').value = '1';
+            document.getElementById('monthlyIncome').value = '95000';
+            document.getElementById('allocatedWheat').value = '5';
+            document.getElementById('availedWheat').value = '45';
+            document.getElementById('allocatedRice').value = '5';
+            document.getElementById('availedRice').value = '45';
+            document.getElementById('biometricFailures').value = '12';
+            document.getElementById('monthlyTxns').value = '18';
+        });
+    }
+
+    function renderPredictionResult(data) {
+        resultContainer.classList.remove('d-none');
+        const probPercent = (data.probability * 100).toFixed(2);
+        resultPercent.textContent = probPercent + '%';
+        progressBar.style.width = Math.min(100, Math.max(5, probPercent)) + '%';
+
+        let sourceLabel = '';
+        if (data.source === 'database') {
+            sourceLabel = ` [Live DB Beneficiary: ${data.ration_card_no} - ${data.head_of_family}]`;
+        } else if (data.source === 'dataset') {
+            sourceLabel = ` [Dataset Record: ${data.record ? data.record.Card_ID : 'CSV'}]`;
+        }
+
+        if (data.prediction === 1) {
+            resultCard.className = 'card border border-danger bg-danger-subtle p-3';
+            resultStatus.textContent = 'High Vigilance Risk Detected' + sourceLabel;
+            resultBadge.className = 'badge bg-danger fs-7';
+            resultBadge.textContent = 'SUSPECTED FRAUD / ANOMALY';
+            progressBar.className = 'progress-bar bg-danger';
+            resultDetails.textContent = 'The XGBoost classifier flagged this profile due to disproportionate grain withdrawals, high biometric failure rate, or transaction frequency atypical of the beneficiary entitlement.';
+        } else {
+            resultCard.className = 'card border border-success bg-success-subtle p-3';
+            resultStatus.textContent = 'Normal Legitimate Pattern' + sourceLabel;
+            resultBadge.className = 'badge bg-success fs-7';
+            resultBadge.textContent = 'LEGITIMATE CLAIM';
+            progressBar.className = 'progress-bar bg-success';
+            resultDetails.textContent = 'Transaction distribution and entitlement claims are fully aligned with baseline demographic allowances and quota thresholds.';
+        }
+    }
+
+    function renderPredictionError(message) {
+        resultContainer.classList.remove('d-none');
+        resultCard.className = 'card border border-warning bg-warning-subtle p-3';
+        resultStatus.textContent = 'Prediction Error';
+        resultBadge.className = 'badge bg-warning text-dark fs-7';
+        resultBadge.textContent = 'ERROR';
+        resultDetails.textContent = message;
+    }
+
+    // 1. Manual Form Submission
+    if (xgbForm) {
+        xgbForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            btnRunPrediction.disabled = true;
+            btnRunPrediction.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Analyzing Patterns...';
+
+            const payload = {
+                Card_Type: document.getElementById('cardType').value,
+                Family_Size: parseFloat(document.getElementById('familySize').value),
+                Monthly_Income: parseFloat(document.getElementById('monthlyIncome').value),
+                Allocated_Wheat_kg: parseFloat(document.getElementById('allocatedWheat').value),
+                Availed_Wheat_kg: parseFloat(document.getElementById('availedWheat').value),
+                Allocated_Rice_kg: parseFloat(document.getElementById('allocatedRice').value),
+                Availed_Rice_kg: parseFloat(document.getElementById('availedRice').value),
+                Biometric_Failures: parseFloat(document.getElementById('biometricFailures').value),
+                Monthly_Transactions: parseFloat(document.getElementById('monthlyTxns').value)
+            };
+
+            try {
+                const response = await fetch('{{ url_for("admin.predict_xgb") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Server returned error ' + response.status);
+                renderPredictionResult(data);
+            } catch (err) {
+                renderPredictionError(err.message);
+            } finally {
+                btnRunPrediction.disabled = false;
+                btnRunPrediction.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Compute Fraud Prediction';
+            }
+        });
+    }
+
+    // 2. Score Live DB Beneficiary
+    const btnScoreDbBeneficiary = document.getElementById('btnScoreDbBeneficiary');
+    const dbBeneficiarySelect = document.getElementById('dbBeneficiarySelect');
+    if (btnScoreDbBeneficiary && dbBeneficiarySelect) {
+        btnScoreDbBeneficiary.addEventListener('click', async function() {
+            const benId = dbBeneficiarySelect.value;
+            if (!benId) {
+                alert('Please select a beneficiary account.');
+                return;
+            }
+            btnScoreDbBeneficiary.disabled = true;
+            btnScoreDbBeneficiary.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading DB Metrics...';
+
+            try {
+                const response = await fetch('{{ url_for("admin.predict_xgb") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ beneficiary_id: parseInt(benId, 10) })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Server error ' + response.status);
+                renderPredictionResult(data);
+            } catch (err) {
+                renderPredictionError(err.message);
+            } finally {
+                btnScoreDbBeneficiary.disabled = false;
+                btnScoreDbBeneficiary.innerHTML = '<i class="bi bi-shield-check me-1"></i> Evaluate Live Beneficiary with XGBoost';
+            }
+        });
+    }
+
+    // 3. Score 20k Dataset Record (CSV)
+    const btnScoreDatasetRecord = document.getElementById('btnScoreDatasetRecord');
+    const datasetCardIdInput = document.getElementById('datasetCardIdInput');
+    const sampleDatasetFraud = document.getElementById('sampleDatasetFraud');
+    const sampleDatasetNormal = document.getElementById('sampleDatasetNormal');
+
+    if (sampleDatasetFraud) {
+        sampleDatasetFraud.addEventListener('click', function() {
+            datasetCardIdInput.value = 'RC-100000';
+            btnScoreDatasetRecord.click();
+        });
+    }
+
+    if (sampleDatasetNormal) {
+        sampleDatasetNormal.addEventListener('click', function() {
+            datasetCardIdInput.value = 'RC-100001';
+            btnScoreDatasetRecord.click();
+        });
+    }
+
+    if (btnScoreDatasetRecord && datasetCardIdInput) {
+        btnScoreDatasetRecord.addEventListener('click', async function() {
+            const cardId = datasetCardIdInput.value.trim();
+            if (!cardId) {
+                alert('Please enter a Card ID from the dataset.');
+                return;
+            }
+            btnScoreDatasetRecord.disabled = true;
+            btnScoreDatasetRecord.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading CSV...';
+
+            try {
+                const response = await fetch('{{ url_for("admin.predict_xgb") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ card_id: cardId })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Card not found in dataset');
+                renderPredictionResult(data);
+            } catch (err) {
+                renderPredictionError(err.message);
+            } finally {
+                btnScoreDatasetRecord.disabled = false;
+                btnScoreDatasetRecord.innerHTML = '<i class="bi bi-search me-1"></i> Score Dataset Record';
+            }
+        });
+    }
+</script>
+{% endblock %}

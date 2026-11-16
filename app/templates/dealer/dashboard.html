@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Dealer Operations Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+
+    <!-- Dealer Dashboard Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h3 fw-bold text-slate-900 mb-0">Fair Price Shop Dealer Console</h2>
+                <span class="badge bg-info-subtle text-info border border-info-subtle">Authorized FPS Dealer</span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">Point of Sale distribution logs and commodity quota management.</p>
+        </div>
+        <div>
+            <span class="badge bg-light text-dark border p-2">
+                <i class="bi bi-person-fill me-1"></i> Dealer: <strong>{{ current_user.full_name }}</strong>
+            </span>
+        </div>
+    </div>
+
+    {% if shop %}
+    <!-- Shop Info Card -->
+    <div class="card shadow-sm mb-4 border-start border-4 border-primary">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="fw-bold text-dark mb-1">
+                        <i class="bi bi-shop me-2 text-primary"></i>{{ shop.name }} ({{ shop.shop_no }})
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-geo-alt me-1"></i> {{ shop.address }}, {{ shop.taluk }}, {{ shop.district }} - {{ shop.pincode }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <span class="badge {% if shop.is_active %}bg-success{% else %}bg-danger{% endif %} px-3 py-2">
+                        <i class="bi bi-check-circle me-1"></i> {% if shop.is_active %}Active License{% else %}Suspended{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Stock Movements & Transactions Rows -->
+    <div class="row g-4 mb-4">
+        <!-- Recent Stock Inward -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>Recent Stock Movements
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Commodity</th>
+                                <th>Movement</th>
+                                <th>Quantity</th>
+                                <th>Batch / Ref</th>
+                                <th class="text-end pe-3">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stock_summary %}
+                            <tr>
+                                <td class="ps-3 fw-semibold text-dark">{{ stock.commodity }}</td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary">{{ stock.movement_type }}</span>
+                                </td>
+                                <td class="fw-bold">{{ stock.quantity }} kg</td>
+                                <td><small class="text-muted">{{ stock.batch_no or 'N/A' }}</small></td>
+                                <td class="text-end pe-3 small text-muted">{{ stock.created_at.strftime('%d %b, %H:%M') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-3 text-muted">No stock movements recorded yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Distributions -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-receipt me-2 text-success"></i>Recent Distributions
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Txn Code</th>
+                                <th>Card No</th>
+                                <th>Commodity</th>
+                                <th>Auth</th>
+                                <th class="text-end pe-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in recent_transactions %}
+                            <tr>
+                                <td class="ps-3 fw-mono small"><code>{{ txn.transaction_code }}</code></td>
+                                <td class="small">{{ txn.beneficiary.ration_card_no }}</td>
+                                <td>{{ txn.commodity }} ({{ txn.quantity }}kg)</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ txn.auth_mode }}</span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    {% if txn.status == 'COMPLETED' %}
+                                        <span class="badge bg-success-subtle text-success">SUCCESS</span>
+                                    {% elif txn.status == 'FLAGGED' %}
+                                        <span class="badge bg-danger-subtle text-danger">FLAGGED</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ txn.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-3 text-muted">No transactions found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        No Fair Price Shop is currently mapped to your dealer profile. Please contact the district civil supplies officer.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+

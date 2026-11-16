@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - PDS Vigilance Portal{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-5">
+            <div class="card auth-card border-0">
+                <!-- Header Banner -->
+                <div class="auth-header p-4 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-white text-dark rounded-circle p-3 mb-2 shadow-sm">
+                        <i class="bi bi-shield-lock fs-3 text-primary"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">PDS Portal Login</h4>
+                    <p class="small text-white-50 mb-0">Ration Distribution & Fraud Detection System</p>
+                </div>
+
+                <!-- Form Card Body -->
+                <div class="card-body p-4 p-md-5 bg-white">
+                    <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                        <!-- Username / Email Field -->
+                        <div class="mb-3">
+                            <label for="identifier" class="form-label fw-medium small text-muted">
+                                <i class="bi bi-person me-1"></i> Username or Official Email
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg fs-6" 
+                                id="identifier" 
+                                name="identifier" 
+                                value="{{ identifier or '' }}" 
+                                placeholder="e.g. admin or dealer_fps101" 
+                                required 
+                                autofocus
+                            >
+                            <div class="invalid-feedback">Please enter your username or registered email.</div>
+                        </div>
+
+                        <!-- Password Field with Show/Hide -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-medium small text-muted">
+                                <i class="bi bi-key me-1"></i> Password
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control form-control-lg fs-6" 
+                                    id="password" 
+                                    name="password" 
+                                    placeholder="Enter your password" 
+                                    required
+                                >
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Toggle password visibility">
+                                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">Please enter your password.</div>
+                        </div>
+
+                        <!-- Remember Me & Reset info -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label small text-muted" for="remember">
+                                    Keep me signed in
+                                </label>
+                            </div>
+                            <span class="text-muted small">
+                                <i class="bi bi-lock me-1"></i> 256-bit Secure
+                            </span>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-primary btn-lg fs-6 fw-semibold py-2">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Authenticate & Enter
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Synthetic Demo Quick-Fill Section -->
+                    <div class="border-top pt-3 mt-2">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-semibold text-secondary">
+                                <i class="bi bi-lightning-charge text-warning"></i> Demo Quick Login
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary fs-xxs">Synthetic Data</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button 
+                                type="button" 
+                                class="btn btn-outline-primary btn-sm quick-fill-btn flex-fill" 
+                                onclick="fillCredentials('admin', 'Admin@123')"
+                            >
+                                <i class="bi bi-shield-check me-1"></i> Admin (All Access)
+                            </button>
+                            <button 
+                                type="button" 
+                                class="btn btn-outline-secondary btn-sm quick-fill-btn flex-fill" 
+                                onclick="fillCredentials('dealer_fps101', 'Dealer@123')"
+                            >
+                                <i class="bi bi-shop me-1"></i> Dealer (FPS-101)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light text-center py-3 border-0">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i> Authorized Personnel Only. Activities are audited.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function fillCredentials(user, pass) {
+        document.getElementById('identifier').value = user;
+        document.getElementById('password').value = pass;
+    }
+
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('password');
+    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+    if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+        togglePasswordBtn.addEventListener('click', function() {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            togglePasswordIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    }
+</script>
+{% endblock %}
+
